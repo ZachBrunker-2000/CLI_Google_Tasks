@@ -77,6 +77,26 @@ def get_tasks(task_name: str = None):
   for item in list_items:
     print(f"{item['title']}")
 
+@app.command
+def insert_task(tasklist_name=None, task_title: str=None):
+  service = check_creds()
+
+  if not tasklist_name:
+    get_tasklist()
+
+    tasklist_name = input("please enter the title of the Task list: ")
+    tasklist_id = get_task_list_by_title(tasklist_name)
+  else:
+    tasklist_id = get_task_list_by_title(tasklist_name)
+
+  if not task_title:
+    task_title = input("What will the task be called?")
+
+  task_details = {'title': task_title}
+
+  new_task = service.tasks().insert(tasklist=tasklist_id,body=task_details).execute()
+  return print(f"'{new_task['title']}' has been added to '{tasklist_name}'")
+
 # get_tasks will return a printed list of the task list you have
 @app.command
 def get_tasklist():
@@ -105,8 +125,8 @@ def insert_tasklist(list_title: str=None):
 
   list_details = {'title': list_title}
 
-  new_task = service.tasklists().insert(body=list_details).execute()
-  return print(f"You have added '{new_task['title']}' as a new task list")
+  new_tasklist = service.tasklists().insert(body=list_details).execute()
+  return print(f"You have added '{new_tasklist['title']}' as a new task list")
 
 @app.command
 def delete_tasklist(tasklist_name: str =None):
