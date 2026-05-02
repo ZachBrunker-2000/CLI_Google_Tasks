@@ -9,6 +9,8 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
 DEBUG = False
+SCOPES = ["https://www.googleapis.com/auth/tasks"]
+
 app = App()
 
 # If modifying these scopes, delete the file token.json.
