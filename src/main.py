@@ -13,9 +13,9 @@ SCOPES = ["https://www.googleapis.com/auth/tasks"]
 
 app = App()
 
-# If modifying these scopes, delete the file token.json.
-SCOPES = ["https://www.googleapis.com/auth/tasks"]
-def check_creds():
+
+
+def get_service():
   """Shows basic usage of the Tasks API.
     Prints the title and ID of the first 10 task lists.
     """
