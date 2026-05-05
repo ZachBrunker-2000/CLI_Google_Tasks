@@ -1,8 +1,8 @@
-import os.path
-
+from pathlib import Path
 #Cyclopts imports for easy CLI app
 from cyclopts import App
 #google imports to connect google api
+from google.auth.exceptions import RefreshError
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -12,36 +12,77 @@ from googleapiclient.errors import HttpError
 DEBUG = False
 # If modifying these scopes, delete the file token.json.
 SCOPES = ["https://www.googleapis.com/auth/tasks"]
+BASE_DIR = Path(__file__).resolve().parent
+TOKEN_PATH = BASE_DIR / "token.json"
+CREDENTIALS_PATH = BASE_DIR / "credentials.json"
+
 
 app = App()
 
 
 
-def get_service():
-  """
-    Shows basic usage of the Tasks API.
-    Prints the title and ID of the first 10 task lists.
-  """
+def load_saved_credentials():
+    """Load saved Google credentials from token.json, if available and readable."""
+    if not TOKEN_PATH.exists():
+        return None
 
-  # The file token.json stores the user's access and refresh tokens and is
-  # created automatically when the authorization flow completes for the first
-  # time.
-  creds = None
-  if os.path.exists("token.json"):
-    creds = Credentials.from_authorized_user_file("token.json", SCOPES)
-  # If there are no (valid) credentials available, let the user log in.
-  if not creds or not creds.valid:
+    try:
+        return Credentials.from_authorized_user_file(str(TOKEN_PATH), SCOPES)
+    except ValueError:
+        # token.json exists but is malformed or incompatible.
+        TOKEN_PATH.unlink(missing_ok=True)
+        return None
+
+
+def run_authorization_flow():
+    """Run the browser-based Google authorization flow and return new credentials."""
+    if not CREDENTIALS_PATH.exists():
+        raise FileNotFoundError(
+            "credentials.json was not found next to main.py. "
+            "Download it from Google Cloud Console and place it beside main.py."
+        )
+
+    flow = InstalledAppFlow.from_client_secrets_file(str(CREDENTIALS_PATH), SCOPES)
+    return flow.run_local_server(port=0)
+
+
+def save_credentials(creds):
+    """Persist credentials for future runs."""
+    TOKEN_PATH.write_text(creds.to_json(), encoding="utf-8")
+
+
+def get_service():
+    """
+    Build and return an authenticated Google Tasks API service.
+
+    If the saved token is expired but refreshable, it is refreshed.
+    If Google rejects the refresh because the token was expired or revoked,
+    the bad token is deleted and the user is asked to authorize again.
+    """
+    creds = load_saved_credentials()
+
+    if creds and creds.valid:
+        return build("tasks", "v1", credentials=creds)
+
     if creds and creds.expired and creds.refresh_token:
-      creds.refresh(Request())
+        try:
+            creds.refresh(Request())
+        except RefreshError:
+            print(
+                "Your saved Google authorization is no longer valid. "
+                "Starting sign-in again..."
+            )
+            TOKEN_PATH.unlink(missing_ok=True)
+            creds = run_authorization_flow()
     else:
-      flow = InstalledAppFlow.from_client_secrets_file(
-          "credentials.json", SCOPES
-      )
-      creds = flow.run_local_server(port=0)
-    # Save the credentials for the next run
-    with open("token.json", "w") as token:
-      token.write(creds.to_json())
-  return build("tasks", "v1", credentials=creds)
+        creds = run_authorization_flow()
+
+    if not creds or not creds.valid:
+        raise RuntimeError("Could not obtain valid Google credentials.")
+
+    save_credentials(creds)
+    return build("tasks", "v1", credentials=creds)
+
 
 def get_tasklists(service):
   """Return all task lists."""
