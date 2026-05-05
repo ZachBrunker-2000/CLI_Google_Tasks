@@ -252,18 +252,14 @@ def delete_tasklist(tasklist_name: str | None = None):
 
 @app.default
 def main():
-  #The main function is called from cli this is the default function if no commands are called after
-  try:
-    welcome_msg()
-
-
-
-
-  except HttpError as err:
-    if DEBUG:
-      print(err)
-    else:
-      print("Sorry couldn't connect to Google.Tasks")
+    """Default CLI entry point."""
+    try:
+        welcome_msg()
+    except HttpError as err:
+        if DEBUG:
+            print(err)
+        else:
+            print("Sorry, couldn't connect to Google Tasks.")
 
 
 if __name__ == "__main__":
