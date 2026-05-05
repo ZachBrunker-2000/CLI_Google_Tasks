@@ -116,23 +116,29 @@ def welcome_msg():
 # get_tasks will return the tasks you have in a specific task list if you do not provide a task list title, then it will prompt you with a
 # list and for a title to find the list of tasks
 @app.command
-def get_tasks(task_name: str = None):
-  service = check_creds()
+def get_tasks(tasklist_name: str | None = None):
+    """Print tasks from a specific task list."""
+    service = get_service()
 
-  if not task_name:
-    get_tasklist()
+    tasklist_name, tasklist_id = resolve_tasklist(
+        service,
+        tasklist_name,
+        "Please enter the title of the task list: ",
+    )
 
-    task_name = input("please enter the title of the Task list: ")
-    tasklist_id = get_task_list_by_title(task_name)
-  else:
-    tasklist_id = get_task_list_by_title(task_name)
+    if not tasklist_id:
+        return
 
-  results = service.tasks().list(tasklist=tasklist_id).execute()
-  list_items = results.get("items",[])
-  if not list_items:
-    print("There are no tasks in list")
-  for item in list_items:
-    print(f"{item['title']}")
+    results = service.tasks().list(tasklist=tasklist_id).execute()
+    tasks = results.get("items", [])
+
+    if not tasks:
+        print("There are no tasks in this list.")
+        return
+
+    for task in tasks:
+        print(task["title"])
+
 
 @app.command
 def insert_task(tasklist_name=None, task_title: str=None):
