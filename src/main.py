@@ -16,7 +16,8 @@ app = App()
 
 
 def get_service():
-  """Shows basic usage of the Tasks API.
+  """
+    Shows basic usage of the Tasks API.
     Prints the title and ID of the first 10 task lists.
     """
 
