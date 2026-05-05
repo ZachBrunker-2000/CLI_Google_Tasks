@@ -94,7 +94,7 @@ def print_tasklists(service):
   for tasklist in tasklists:
     results = service.tasks().list(tasklist=tasklist["id"]).execute()
     tasks = results.get("items", [])
-    print(f"{tasklist['title']} ({tasklist['id']}) tasks in list: {len(tasks)}")
+    print(f"{tasklist['title']} (ID: {tasklist['id']}) tasks in list: {len(tasks)}")
 
 
 def welcome_msg():
