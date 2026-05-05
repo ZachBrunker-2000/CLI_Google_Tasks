@@ -211,28 +211,44 @@ def insert_tasklist(list_title: str | None = None):
 
 
 @app.command
-def delete_tasklist(tasklist_name: str =None):
-  service = check_creds()
+def delete_tasklist(tasklist_name: str | None = None):
+    """Delete a task list after confirmation."""
+    service = get_service()
 
-  if not tasklist_name:
-    get_tasklist()
+    tasklist_name, tasklist_id = resolve_tasklist(
+        service,
+        tasklist_name,
+        "Please enter the title of the task list you would like to delete: ",
+    )
 
-    tasklist_name = input("please enter the title of the Task list you would like to delete: ")
-    tasklist_id = get_task_list_by_title(tasklist_name)
-  else:
-    tasklist_id = get_task_list_by_title(tasklist_name)
+    if not tasklist_id:
+        return
 
-  results = service.tasks().list(tasklist=tasklist_id).execute()
-  list_items = results.get("items", [])
-  if not list_items:
-    confirmation = input("There are no tasks in list... Y/N if you would like to delete list(This cannot be undone)")
-    if confirmation == 'y' or 'Y' or 'yes' or 'Yes':
-      print(f"Deleting Task list: {tasklist_name}")
-      service.tasklists().delete(tasklist=tasklist_id).execute()
-  else:
-    confirmation_name = input(f"Are you sure you would like to delete {tasklist_name} there are: {len(list_items)} tasks in {tasklist_name}... Please type the name of the task list to delete. ")
-    if confirmation_name == tasklist_name:
-      service.tasklists().delete(tasklist=tasklist_id).execute()
+    results = service.tasks().list(tasklist=tasklist_id).execute()
+    tasks = results.get("items", [])
+
+    if not tasks:
+        confirmation = input(
+            "There are no tasks in this list. Delete it? This cannot be undone. [y/N] "
+        ).strip().lower()
+
+        if confirmation not in {"y", "yes"}:
+            print("Delete cancelled.")
+            return
+    else:
+        confirmation_name = input(
+            f"Are you sure you would like to delete '{tasklist_name}'? "
+            f"There are {len(tasks)} tasks in this list. "
+            "Type the task list name to confirm: "
+        ).strip()
+
+        if confirmation_name != tasklist_name:
+            print("Delete cancelled.")
+            return
+
+    service.tasklists().delete(tasklist=tasklist_id).execute()
+    print(f"Deleted task list: '{tasklist_name}'.")
+
 
 @app.default
 def main():
