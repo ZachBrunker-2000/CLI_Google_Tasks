@@ -1,7 +1,8 @@
 import os.path
+
 #Cyclopts imports for easy CLI app
 from cyclopts import App
-#google imports for auth to connect google Tasks api
+#google imports to connect google api
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -9,6 +10,7 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
 DEBUG = False
+# If modifying these scopes, delete the file token.json.
 SCOPES = ["https://www.googleapis.com/auth/tasks"]
 
 app = App()
@@ -19,7 +21,7 @@ def get_service():
   """
     Shows basic usage of the Tasks API.
     Prints the title and ID of the first 10 task lists.
-    """
+  """
 
   # The file token.json stores the user's access and refresh tokens and is
   # created automatically when the authorization flow completes for the first
@@ -113,8 +115,6 @@ def welcome_msg():
     "\n  python main.py insert-tasklist"
   )
 
-# get_tasks will return the tasks you have in a specific task list if you do not provide a task list title, then it will prompt you with a
-# list and for a title to find the list of tasks
 @app.command
 def get_tasks(tasklist_name: str | None = None):
     """Print tasks from a specific task list."""
@@ -166,7 +166,7 @@ def insert_task(tasklist_name: str | None = None, task_title: str | None = None)
 
     print(f"'{new_task['title']}' has been added to '{tasklist_name}'.")
 
-# get_tasks will return a printed list of the task list you have
+
 @app.command
 def clear_task(tasklist_name: str | None = None):
     """Clear completed tasks from a task list."""
