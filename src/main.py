@@ -96,21 +96,22 @@ def print_tasklists(service):
 
 
 def welcome_msg():
-  print(f"Hello, Welcome to ClITasks. This application connects to your google tasks allowing you to view, add, and remove tasks or tasklists.\n"
-        f"Your current task list are: \n"
-          )
-  get_tasklist()
-  print("\n\nIf you would like to add a new task or tasklist run python3 main.py add task, or python3 main.py add tasklist")
+  service = get_service()
 
-def get_task_list_by_title(title: str):
-  service = check_creds()
+  print(
+    "Hello, welcome to ClITasks. This application connects to your Google "
+    "Tasks, allowing you to view, add, and remove tasks or task lists.\n"
+  )
+  print("Your current task lists are:\n")
 
-  results = service.tasklists().list().execute()
-  for item in results.get("items", []):
-    if item["title"] == title:
-      return item["id"]
+  print_tasklists(service)
 
-  return None
+  print(
+    "\nTo add a new task, run:"
+    "\n  python main.py insert-task"
+    "\n\nTo add a new task list, run:"
+    "\n  python main.py insert-tasklist"
+  )
 
 # get_tasks will return the tasks you have in a specific task list if you do not provide a task list title, then it will prompt you with a
 # list and for a title to find the list of tasks
