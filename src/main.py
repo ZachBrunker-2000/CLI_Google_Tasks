@@ -141,55 +141,74 @@ def get_tasks(tasklist_name: str | None = None):
 
 
 @app.command
-def insert_task(tasklist_name=None, task_title: str=None):
-  service = check_creds()
+def insert_task(tasklist_name: str | None = None, task_title: str | None = None):
+    """Insert a new task into a task list."""
+    service = get_service()
 
-  if not tasklist_name:
-    get_tasklist()
+    tasklist_name, tasklist_id = resolve_tasklist(
+        service,
+        tasklist_name,
+        "Please enter the title of the task list: ",
+    )
 
-    tasklist_name = input("please enter the title of the Task list: ")
-    tasklist_id = get_task_list_by_title(tasklist_name)
-  else:
-    tasklist_id = get_task_list_by_title(tasklist_name)
+    if not tasklist_id:
+        return
 
-  if not task_title:
-    task_title = input("What will the task be called?")
+    if not task_title:
+        task_title = input("What will the task be called? ").strip()
 
-  task_details = {'title': task_title}
+    if not task_title:
+        print("Task title cannot be empty.")
+        return
 
-  new_task = service.tasks().insert(tasklist=tasklist_id,body=task_details).execute()
-  return print(f"'{new_task['title']}' has been added to '{tasklist_name}'")
+    task_details = {"title": task_title}
+    new_task = service.tasks().insert(tasklist=tasklist_id, body=task_details).execute()
+
+    print(f"'{new_task['title']}' has been added to '{tasklist_name}'.")
 
 # get_tasks will return a printed list of the task list you have
 @app.command
-def get_tasklist():
-  service = check_creds()
+def clear_task(tasklist_name: str | None = None):
+    """Clear completed tasks from a task list."""
+    service = get_service()
 
-  # Call the Tasks API
-  results = service.tasklists().list(maxResults=10).execute()
-  items = results.get("items", [])
+    tasklist_name, tasklist_id = resolve_tasklist(
+        service,
+        tasklist_name,
+        "Please enter the title of the task list: ",
+    )
 
-  if not items:
-    print("No task lists found.")
-    return
+    if not tasklist_id:
+        return
 
-  for item in items:
-    results = service.tasks().list(tasklist=item['id']).execute()
-    tasks = results.get("items", [])
-    print(f"{item['title']} ({item['id']}) tasks in list: {len(tasks)}")
+    service.tasks().clear(tasklist=tasklist_id).execute()
+    print(f"Completed tasks have been cleared from '{tasklist_name}'.")
 
 
 @app.command
-def insert_tasklist(list_title: str=None):
-  service = check_creds()
+def get_tasklist():
+    """Print all task lists."""
+    service = get_service()
+    print_tasklists(service)
 
-  if not list_title:
-    list_title= input("What is the task list name?")
 
-  list_details = {'title': list_title}
+@app.command
+def insert_tasklist(list_title: str | None = None):
+    """Create a new task list."""
+    service = get_service()
 
-  new_tasklist = service.tasklists().insert(body=list_details).execute()
-  return print(f"You have added '{new_tasklist['title']}' as a new task list")
+    if not list_title:
+        list_title = input("What is the task list name? ").strip()
+
+    if not list_title:
+        print("Task list title cannot be empty.")
+        return
+
+    list_details = {"title": list_title}
+    new_tasklist = service.tasklists().insert(body=list_details).execute()
+
+    print(f"You have added '{new_tasklist['title']}' as a new task list.")
+
 
 @app.command
 def delete_tasklist(tasklist_name: str =None):
