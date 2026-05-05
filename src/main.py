@@ -41,6 +41,59 @@ def get_service():
       token.write(creds.to_json())
   return build("tasks", "v1", credentials=creds)
 
+def get_tasklists(service):
+  """Return all task lists."""
+  results = service.tasklists().list(maxResults=100).execute()
+  return results.get("items", [])
+
+def get_tasklist_id_by_title(service, title: str):
+  """Return a task list ID by title, or None if not found."""
+  for tasklist in get_tasklists(service):
+    if tasklist["title"] == title:
+      return tasklist["id"]
+
+  return None
+
+def prompt_for_tasklist(service, prompt: str = "Please enter the title of the task list: "):
+  """Show task lists, ask for a title, and return the title and ID."""
+  print_tasklists(service)
+
+  tasklist_name = input(prompt).strip()
+  tasklist_id = get_tasklist_id_by_title(service, tasklist_name)
+
+  if not tasklist_id:
+    print(f"No task list found with the title '{tasklist_name}'.")
+    return None, None
+
+  return tasklist_name, tasklist_id
+
+def resolve_tasklist(service, tasklist_name: str | None, prompt: str):
+  """Resolve a task list name into a title and ID."""
+  if not tasklist_name:
+    return prompt_for_tasklist(service, prompt)
+
+  tasklist_id = get_tasklist_id_by_title(service, tasklist_name)
+
+  if not tasklist_id:
+    print(f"No task list found with the title '{tasklist_name}'.")
+    return None, None
+
+  return tasklist_name, tasklist_id
+
+
+def print_tasklists(service):
+  """Print all task lists with their IDs and task counts."""
+  tasklists = get_tasklists(service)
+
+  if not tasklists:
+    print("No task lists found.")
+    return
+
+  for tasklist in tasklists:
+    results = service.tasks().list(tasklist=tasklist["id"]).execute()
+    tasks = results.get("items", [])
+    print(f"{tasklist['title']} ({tasklist['id']}) tasks in list: {len(tasks)}")
+
 
 def welcome_msg():
   print(f"Hello, Welcome to ClITasks. This application connects to your google tasks allowing you to view, add, and remove tasks or tasklists.\n"
