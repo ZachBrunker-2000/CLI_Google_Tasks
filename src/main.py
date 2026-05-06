@@ -137,6 +137,15 @@ def print_tasklists(service):
     tasks = results.get("items", [])
     print(f"{tasklist['title']} (ID: {tasklist['id']}) tasks in list: {len(tasks)}")
 
+def print_tasks(tasks):
+    if not tasks:
+        print("There are no tasks in this list")
+        return
+
+    for index, task in enumerate(tasks,start=1):
+        title = task.get("Title","Untitled Task")
+        print(f"{index}. {title}")
+
 
 def welcome_msg():
   service = get_service()
