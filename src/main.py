@@ -139,10 +139,10 @@ def print_tasklists(service):
     print("No task lists found.")
     return
 
-  for tasklist in tasklists:
+  for index,tasklist in enumerate(tasklists,start=1):
     results = service.tasks().list(tasklist=tasklist["id"]).execute()
     tasks = results.get("items", [])
-    print(f"{tasklist['title']} (ID: {tasklist['id']}) tasks in list: {len(tasks)}")
+    print(f"{index}. {tasklist['title']} (ID: {tasklist['id']}) tasks in list: {len(tasks)}")
 
 def print_tasks(tasks):
     if not tasks:
