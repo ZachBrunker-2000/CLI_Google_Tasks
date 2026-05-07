@@ -97,6 +97,13 @@ def get_tasklist_id_by_title(service, title: str):
 
   return None
 
+def prompt_for_task_details():
+    task_title = input("Please enter the title of the task: ").strip()
+    task_desc = input("Please enter a description/notes for task(optional): ").strip()
+    task_due = input("Please enter when task is due(optional): ").strip()
+
+    return {task_title,task_desc,task_due}
+
 def prompt_for_tasklist(service, prompt: str = "Please enter the title of the task list: "):
   """Show task lists, ask for a title, and return the title and ID."""
   print_tasklists(service)
