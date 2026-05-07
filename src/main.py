@@ -150,7 +150,7 @@ def print_tasks(tasks):
         return
 
     for index, task in enumerate(tasks,start=1):
-        title = task.get("Title","Untitled Task")
+        title = task.get("title")
         print(f"{index}. {title}")
 
 
