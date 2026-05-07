@@ -84,7 +84,9 @@ def get_service():
     return build("tasks", "v1", credentials=creds)
 
 
-def get_tasklists(service):
+
+'''Helper functions'''
+def list_tasklists(service):
   """Return all task lists."""
   results = service.tasklists().list(maxResults=100).execute()
   return results.get("items", [])
