@@ -9,6 +9,7 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
+#Global variables
 DEBUG = False
 # If modifying these scopes, delete the file token.json.
 SCOPES = ["https://www.googleapis.com/auth/tasks"]
@@ -21,6 +22,7 @@ app = App()
 
 
 
+'''Functions to authorize google task connect'''
 def load_saved_credentials():
     """Load saved Google credentials from token.json, if available and readable."""
     if not TOKEN_PATH.exists():
@@ -33,7 +35,6 @@ def load_saved_credentials():
         TOKEN_PATH.unlink(missing_ok=True)
         return None
 
-
 def run_authorization_flow():
     """Run the browser-based Google authorization flow and return new credentials."""
     if not CREDENTIALS_PATH.exists():
@@ -45,11 +46,9 @@ def run_authorization_flow():
     flow = InstalledAppFlow.from_client_secrets_file(str(CREDENTIALS_PATH), SCOPES)
     return flow.run_local_server(port=0)
 
-
 def save_credentials(creds):
     """Persist credentials for future runs."""
     TOKEN_PATH.write_text(creds.to_json(), encoding="utf-8")
-
 
 def get_service():
     """
@@ -91,20 +90,80 @@ def list_tasklists(service):
   results = service.tasklists().list(maxResults=100).execute()
   return results.get("items", [])
 
+def list_tasks(service,tasklist_id):
+    results = service.tasks().list(tasklist=tasklist_id).execute()
+    tasks = results.get("items", [])
+    return tasks
+
 def get_tasklist_id_by_title(service, title: str):
   """Return a task list ID by title, or None if not found."""
-  for tasklist in get_tasklists(service):
+  for tasklist in list_tasklists(service):
     if tasklist["title"] == title:
       return tasklist["id"]
 
   return None
 
-def prompt_for_task_details():
-    task_title = input("Please enter the title of the task: ").strip()
-    task_desc = input("Please enter a description/notes for task(optional): ").strip()
-    task_due = input("Please enter when task is due(optional): ").strip()
+def get_task_by_title(service, tasklist_id, task_name:str):
+    for task in list_tasks(service,tasklist_id):
+        if task["title"] == task_name:
+            return task["id"]
 
-    return {task_title,task_desc,task_due}
+    return None
+
+def prompt_for_task_details():
+    menu_choice = input(
+        """
+        How would you like to update the task? (enter number for option)
+        1. Rename task
+        2. add/update description
+        3. update all
+        """
+    ).strip()
+
+
+
+    match int(menu_choice):
+        case 1:
+            task_title = input("Please enter the title of the task: ")
+            return {'title':task_title}
+        case 2:
+            task_desc = input("Please enter a description/notes for task(optional): ").strip()
+            return {'notes':task_desc}
+        case 3:
+            task_title = input("Please enter the title of the task: ").strip()
+            task_desc = input("Please enter a description/notes for task(optional): ").strip()
+            return {'title': task_title, 'notes': task_desc}
+        case _:
+            return {}
+
+
+    #for later task_due = input("Please enter when task is due(optional): ").strip()
+
+
+
+def prompt_for_task(service, tasklist_id, task_name, prompt: str = "Please enter the title of the task: "):
+    if not task_name:
+        tasks = list_tasks(service,tasklist_id)
+        print_tasks(tasks)
+
+        task_name = input(prompt).strip()
+    task_id = get_task_by_title(service, tasklist_id, task_name)
+
+    return task_name, task_id
+
+def resolve_task(service, tasklist_id, task_name:str |None = None,prompt: str = "Please enter the title of the task: "):
+    if not task_name:
+        return prompt_for_task(service, tasklist_id, task_name, prompt)
+
+    task_id = get_task_by_title(service, tasklist_id, task_name)
+
+    if not task_id:
+        print(f"There is not task named{task_name} in tasklist id: '{tasklist_id}'.")
+        return None, None
+
+
+    return task_name, task_id
+
 
 def prompt_for_tasklist(service, prompt: str = "Please enter the title of the task list: "):
   """Show task lists, ask for a title, and return the title and ID."""
@@ -132,10 +191,9 @@ def resolve_tasklist(service, tasklist_name: str | None, prompt: str):
 
   return tasklist_name, tasklist_id
 
-
 def print_tasklists(service):
   """Print all task lists with their IDs and task counts."""
-  tasklists = get_tasklists(service)
+  tasklists = list_tasklists(service)
 
   if not tasklists:
     print("No task lists found.")
@@ -155,7 +213,6 @@ def print_tasks(tasks):
         title = task.get("title")
         print(f"{index}. {title}")
 
-
 def welcome_msg():
   service = get_service()
 
@@ -174,6 +231,9 @@ def welcome_msg():
     "\n  python main.py insert-tasklist"
   )
 
+
+
+'''App commands that use helper functions to display, add, and edit tasks and tasklist'''
 @app.command
 def get_tasks(tasklist_name: str | None = None):
     """Print tasks from a specific task list."""
@@ -191,16 +251,10 @@ def get_tasks(tasklist_name: str | None = None):
     results = service.tasks().list(tasklist=tasklist_id).execute()
     tasks = results.get("items", [])
 
-    if not tasks:
-        print("There are no tasks in this list.")
-        return
-
-    for task in tasks:
-        print(task["title"])
-
+    print_tasks(tasks)
 
 @app.command
-def insert_task(tasklist_name: str | None = None, task_title: str | None = None):
+def insert_task(tasklist_name: str | None = None):
     """Insert a new task into a task list."""
     service = get_service()
 
@@ -213,18 +267,39 @@ def insert_task(tasklist_name: str | None = None, task_title: str | None = None)
     if not tasklist_id:
         return
 
-    if not task_title:
-        task_title = input("What will the task be called? ").strip()
 
-    if not task_title:
-        print("Task title cannot be empty.")
+
+    task_details = prompt_for_task_details()
+    if not task_details["title"]:
         return
 
-    task_details = {"title": task_title}
     new_task = service.tasks().insert(tasklist=tasklist_id, body=task_details).execute()
 
     print(f"'{new_task['title']}' has been added to '{tasklist_name}'.")
 
+@app.command
+def update_task(tasklist_name:str | None = None, task_name: str | None=None):
+    service = get_service()
+
+    tasklist_name, tasklist_id = resolve_tasklist(
+        service,
+        tasklist_name,
+        "Please enter the title of the task list: "
+    )
+    task_name, task_id = resolve_task(
+        service,
+        tasklist_id,
+        task_name
+    )
+
+    task_body = prompt_for_task_details()
+
+    if task_body == {}:
+        print("Nothing was updated")
+        return
+    print(f"updating {task_name} in list {tasklist_name}: content getting updated {task_body}")
+    service.tasks().patch(tasklist=tasklist_id,task=task_id,body=task_body).execute()
+    print("done updating")
 
 @app.command
 def clear_task(tasklist_name: str | None = None):
@@ -243,13 +318,11 @@ def clear_task(tasklist_name: str | None = None):
     service.tasks().clear(tasklist=tasklist_id).execute()
     print(f"Completed tasks have been cleared from '{tasklist_name}'.")
 
-
 @app.command
 def get_tasklist():
     """Print all task lists."""
     service = get_service()
     print_tasklists(service)
-
 
 @app.command
 def insert_tasklist(list_title: str | None = None):
@@ -267,7 +340,6 @@ def insert_tasklist(list_title: str | None = None):
     new_tasklist = service.tasklists().insert(body=list_details).execute()
 
     print(f"You have added '{new_tasklist['title']}' as a new task list.")
-
 
 @app.command
 def delete_tasklist(tasklist_name: str | None = None):
@@ -308,7 +380,6 @@ def delete_tasklist(tasklist_name: str | None = None):
     service.tasklists().delete(tasklist=tasklist_id).execute()
     print(f"Deleted task list: '{tasklist_name}'.")
 
-
 @app.default
 def main():
     """Default CLI entry point."""
@@ -319,6 +390,7 @@ def main():
             print(err)
         else:
             print("Sorry, couldn't connect to Google Tasks.")
+
 
 
 if __name__ == "__main__":
